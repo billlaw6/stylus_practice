@@ -1,0 +1,148 @@
+// 实践经验总结
+// 1、注释都在顶格写，不能写属性中间，否则会报indent相关错误
+//
+// Interpolation
+// Stylus支持通过使用{}字符包围表达式来插入值，其会变成 标识符 的一部分。
+// 如 -webkit-{'border' + '-radius'}等同于-webkit-border-radius
+vendor(prop, args)
+  -webkit-{prop} args
+  -moz-{prop} args
+  {prop} args
+
+border-radius()
+  vendor('border-radius', arguments)
+
+box-shadow()
+  vendor('box-shadow', arguments)
+
+button
+  border-radius 1px 2px / 3px 4px
+
+// 选择器 插值，表达式成为 选择器的一部分
+table
+  for row in 1 2 3 4 5
+    tr:nth-child({row})
+      height: 10px * row
+
+////////////////////////////////////////////////////
+// Mixins
+// 混入和函数定义方法一致，但是应用差别很大
+// 如border-radius(n)定义后，作为状态调用（而非表达式调用）就叫mixin
+// 定义（注意，此处没有递归死循环）
+// 此处被当作了属性，而不是一个递归函数的调用
+border-radius(n)
+  -webkit-border-radius n
+  -moz-border-radius n
+  border-radius n
+
+// 两种调用方法
+form input[type=button]
+  border-radius(5px)
+  border-radius 5px
+
+// 还可以使用arguments这个局部变量，传递包含多值的表达式
+border-radius()
+  -webkit-border-radius arguments
+  -moz-border-radius arguments
+  border-radius arguments
+
+// 特定的私有前缀支持——例如IE浏览器的透明度
+support-for-ie ?= true
+
+opacity(n)
+  opacity n
+  if support-for-ie
+    filter unquote('progid:DXImageTransform.Microsoft.Alpha(Opacity=' + round(n * 100) + ')')
+
+#logo
+  &:hover
+    opacity 0.5
+
+// 混合书写可以利用父级引用字符&, 继承父业而不是自己筑巢。
+stripe(even = #fff, odd = #eee)
+ tr
+   background-color odd
+   &.even
+   &:nth-child(even)
+       background-color even
+
+table
+  stripe()
+  td
+    padding 4px 10px
+
+table#users
+  stripe(#303030, #494848)
+  td
+    color white
+
+// 混合书写中的混合书写
+inline-list()
+  li
+    display inline
+
+comma-list()
+  inline-list()
+  li
+    &:after
+      content ', '
+    &:last-child:after
+      content ''
+ul
+  comma-list()
+
+/////////////////////////////////////////////////////////////////////////////////
+// Functions
+// Stylus强大之处就在于其内置的语言函数定义。其定义与混入(mixins)一致；却可以返回值。
+// 当把函数作为 mixin 调用时，如果其中有 prop: value 这样格式的内容，就会被当做样式规则输出，mixin没有返回值。Stylus 中大量的内容都是根据调用时的 context 去隐式推断该使用什么逻辑进行输出，而非 Less 和 Sass 那样使用关键字去显式地进行区分。
+add(a, b)
+  a + b
+
+body 
+  padding add(10px, 5)
+
+// 用函数返回多个值
+sizes()
+	15px 10px
+
+.test_func
+	font-size: sizes()[0]
+
+// 将函数当参数
+invoke(a, b, fn)
+  fn(a, b)
+
+add(a, b)
+  a + b
+
+body
+  padding invoke(5, 10, add)
+  padding invoke(5, 10, sub)
+
+// arguments是所有函数体都有的局部变量，包含传递的所有参数
+sum()
+  n = 0
+  for num in arguments
+    n = n + num
+
+sum(1,2,3,4,5)
+
+// 哈希示例
+get(hash, key)
+  return pair[1] if pair[0] == key for pair in hash
+
+hash = (one 1) (two 2) (three 3)
+get(hash, two)
+// => 2
+get(hash, three)
+// => 3
+get(hash, something)
+// => null
+
+/////////////////////////////////////////////////////////////////////////////
+// 测试
+padding-top()
+	padding-top 5vw
+
+.padding-test
+	padding-top()
